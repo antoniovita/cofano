@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { NavBar } from "@/components/NavBar";
-import { Geist } from "next/font/google";
-import { cn } from "@/lib/utils";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+import { NavBar } from "@/components/NavBar";
+import { Ticker } from "@/components/Ticker";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -17,8 +18,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("h-full antialiased", "font-sans", geist.variable)}>
-      <body className="min-h-full flex flex-col">
+    <html lang="en" className="h-full antialiased font-sans">
+      <body className="min-h-full flex flex-col bg-[#0f0f0f]">
+        <Ticker />
         <NavBar />
         {children}
       </body>

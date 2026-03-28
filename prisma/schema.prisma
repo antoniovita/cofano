@@ -26,9 +26,13 @@ model User {
 
 model Article {
   id        String   @id @default(uuid()) @db.Uuid
-  title     String
-  content   String
+  tag       String
+  cover     String
   published Boolean  @default(false)
+  views     Int
+  defaultLocale String @default("pt")
+
+  translations ArticleTranslation[]
 
   authorId  String   @db.Uuid
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -38,4 +42,24 @@ model Article {
 
   @@index([authorId])
   @@map("articles")
+}
+
+model ArticleTranslation {
+  id        String  @id @default(uuid()) @db.Uuid
+  locale    String
+
+  title     String
+  content   String
+  wordCount Int     @default(0)
+  readingTimeMinutes Int @default(0)
+
+  articleId String  @db.Uuid
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([articleId, locale])
+  @@index([locale])
+  @@map("article_translations")
 }
