@@ -62,6 +62,7 @@ type ApiArticleShape = {
   tag: string;
   cover: string;
   published: boolean;
+  featured: boolean;
   wordCount: number;
   readingTimeMinutes: number;
   views: number;
@@ -78,6 +79,7 @@ function shapeArticle(
     tag: string;
     cover: string;
     published: boolean;
+    featured: boolean;
     views: number;
     defaultLocale: string;
     createdAt: Date;
@@ -103,6 +105,7 @@ function shapeArticle(
     tag: article.tag,
     cover: article.cover,
     published: article.published,
+    featured: article.featured,
     views: article.views,
     locale: t?.locale || locale,
     defaultLocale: article.defaultLocale,
@@ -122,6 +125,7 @@ export async function GET(req: Request) {
     const q = searchParams.get("q")?.trim() || null;
     const authorId = searchParams.get("authorId")?.trim() || null;
     const published = toBool(searchParams.get("published"));
+    const featured = toBool(searchParams.get("featured"));
     const order = (searchParams.get("order") || "createdAt").trim();
     const direction = (searchParams.get("direction") || "desc").trim();
     const sortOrder: Prisma.SortOrder = direction === "asc" ? "asc" : "desc";
@@ -180,6 +184,7 @@ export async function GET(req: Request) {
     if (tag) where.tag = tag;
     if (authorId) where.authorId = authorId;
     if (published !== null) where.published = published;
+    if (featured !== null) where.featured = featured;
     if (q) {
       where.translations = {
         some: {
@@ -259,6 +264,7 @@ export async function POST(req: Request) {
         cover,
         published: published ?? false,
         views: 0,
+        featured: false,
         authorId: currentUser.id,
         defaultLocale: locale,
         translations: {
@@ -328,12 +334,14 @@ export async function PATCH(req: Request) {
     const tag = getString(body, "tag");
     const cover = getString(body, "cover");
     const published = getBoolean(body, "published");
+    const featured = getBoolean(body, "featured");
     const content = getString(body, "content");
     const incrementViews = body["incrementViews"] === true;
 
     if (tag !== null) data.tag = tag;
     if (cover !== null) data.cover = cover;
     if (published !== null) data.published = published;
+    if (featured !== null) data.featured = featured;
 
     if (incrementViews) data.views = { increment: 1 };
 

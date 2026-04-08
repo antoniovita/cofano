@@ -211,7 +211,7 @@ export function NavBar() {
         </Link>
 
         <div className="hidden sm:flex items-center">
-          <div className="flex items-center gap-0.5 rounded-full border border-white/[0.07] bg-white/2 px-1.5 py-1">
+          <div className="flex items-center gap-1 rounded-full border border-white/[0.07] bg-white/2 px-1.5 py-1">
             {NAV_ITEMS.map((item) => {
               const active = pathname === item.href;
               return (

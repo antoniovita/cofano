@@ -31,6 +31,7 @@ model Article {
   published Boolean  @default(false)
   views     Int
   defaultLocale String @default("pt")
+  featured  Boolean
 
   translations ArticleTranslation[]
 

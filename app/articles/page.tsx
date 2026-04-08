@@ -7,7 +7,7 @@ import { ArrowRight, Check, Eye, PenLine, Share, SlidersHorizontal } from "lucid
 
 import { cn } from "@/lib/utils";
 
-type TabKey = "For you" | "Featured";
+type TabKey = "All posts" | "Featured";
 
 type ApiAuthor = {
   id: string;
@@ -22,6 +22,7 @@ type ApiArticle = {
   tag: string;
   cover: string;
   published: boolean;
+  featured: boolean;
   wordCount: number;
   readingTimeMinutes: number;
   views: number;
@@ -32,7 +33,7 @@ type ApiArticle = {
 
 type ArticleCard = {
   id: string;
-  section: TabKey;
+  featured: boolean;
   publication: string;
   author: string;
   title: string;
@@ -49,7 +50,7 @@ type ArticleCard = {
 const MOCK_ARTICLES: ArticleCard[] = [
   {
     id: "a-1",
-    section: "For you",
+    featured: false,
     publication: "DeFi Institute",
     author: "Equipe Editorial",
     title: "Por que entender DeFi muda sua forma de operar",
@@ -66,7 +67,7 @@ const MOCK_ARTICLES: ArticleCard[] = [
   },
   {
     id: "a-2",
-    section: "For you",
+    featured: false,
     publication: "Mecânicas DeFi",
     author: "Time de Pesquisa",
     title: "AMMs: preço, slippage e o custo real do swap",
@@ -83,7 +84,7 @@ const MOCK_ARTICLES: ArticleCard[] = [
   },
   {
     id: "a-3",
-    section: "For you",
+    featured: false,
     publication: "Segurança",
     author: "Equipe Editorial",
     title: "Checklist de segurança antes de interagir com um protocolo",
@@ -100,7 +101,7 @@ const MOCK_ARTICLES: ArticleCard[] = [
   },
   {
     id: "a-4",
-    section: "Featured",
+    featured: true,
     publication: "Mercado",
     author: "Equipe Editorial",
     title: "Stablecoins: o que observar em momentos de estresse",
@@ -117,7 +118,7 @@ const MOCK_ARTICLES: ArticleCard[] = [
   },
   {
     id: "a-5",
-    section: "Featured",
+    featured: true,
     publication: "Mecânicas DeFi",
     author: "Time de Pesquisa",
     title: "Lending sem sustos: health factor e liquidações",
@@ -134,7 +135,7 @@ const MOCK_ARTICLES: ArticleCard[] = [
   },
   {
     id: "a-6",
-    section: "Featured",
+    featured: true,
     publication: "Segurança",
     author: "Equipe Editorial",
     title: "Auditoria rápida: um framework para avaliar protocolos",
@@ -193,7 +194,7 @@ function makeExcerpt(content: string, maxLen = 160) {
 }
 
 export default function ArticlesPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>("For you");
+  const [activeTab, setActiveTab] = useState<TabKey>("All posts");
   const [activeTag, setActiveTag] = useState<string>("All");
   const [filterOpen, setFilterOpen] = useState(false);
   const [apiArticles, setApiArticles] = useState<ApiArticle[] | null>(null);
@@ -209,6 +210,7 @@ export default function ArticlesPage() {
       take: "50",
       skip: "0",
     });
+    if (activeTab === "Featured") params.set("featured", "true");
     return `/api/articles?${params.toString()}`;
   }, [activeTab]);
 
@@ -257,7 +259,7 @@ export default function ArticlesPage() {
 
       return {
         id: article.id,
-        section: activeTab,
+        featured: Boolean(article.featured),
         publication: "DeFi Institute",
         author: article.author?.username || "Equipe Editorial",
         title: article.title,
@@ -273,10 +275,13 @@ export default function ArticlesPage() {
         )}`,
       };
     });
-  }, [activeTab, apiArticles]);
+  }, [apiArticles]);
 
   const articlesForTab = useMemo(
-    () => allArticles.filter((article) => article.section === activeTab),
+    () =>
+      activeTab === "Featured"
+        ? allArticles.filter((article) => article.featured)
+        : allArticles,
     [activeTab, allArticles]
   );
 
@@ -315,7 +320,7 @@ export default function ArticlesPage() {
           <div>
             <div className="flex items-end justify-between gap-6 border-b border-white/6">
               <div className="flex items-center gap-6 text-[13px] text-neutral-500">
-                {(["For you", "Featured"] as TabKey[]).map((tab) => {
+                {(["All posts", "Featured"] as TabKey[]).map((tab) => {
                   const active = tab === activeTab;
                   return (
                     <button
@@ -399,7 +404,7 @@ export default function ArticlesPage() {
                             setFilterOpen(false);
                           }}
                           className={cn(
-                            "flex w-full items-center justify-between rounded-xl px-3 py-2 text-[13px] transition-colors",
+                            "flex w-full items-center justify-between rounded-xl px-3 py-2 mt-2 text-[13px] transition-colors",
                             active
                               ? "bg-white/8 text-white"
                               : "text-neutral-300 hover:bg-white/6"
