@@ -233,6 +233,8 @@ export async function POST(req: Request) {
     const prisma = getPrisma();
     const currentUser = await getCurrentUser();
     if (!currentUser) return jsonError("Unauthorized", 401);
+    const canWrite = currentUser.role === "ADMIN" || currentUser.role === "CONTRIBUTOR";
+    if (!canWrite) return jsonError("Forbidden", 403);
 
     let body: unknown;
     try {
@@ -327,7 +329,10 @@ export async function PATCH(req: Request) {
     if (!existing) return jsonError("Article not found", 404);
 
     const isAdmin = currentUser.role === "ADMIN";
-    if (!isAdmin && existing.authorId !== currentUser.id) return jsonError("Forbidden", 403);
+    if (!isAdmin) {
+      const isContributor = currentUser.role === "CONTRIBUTOR";
+      if (!isContributor || existing.authorId !== currentUser.id) return jsonError("Forbidden", 403);
+    }
 
     const data: Prisma.ArticleUpdateInput = {};
     const title = getString(body, "title");
@@ -432,7 +437,10 @@ export async function DELETE(req: Request) {
     if (!existing) return jsonError("Article not found", 404);
 
     const isAdmin = currentUser.role === "ADMIN";
-    if (!isAdmin && existing.authorId !== currentUser.id) return jsonError("Forbidden", 403);
+    if (!isAdmin) {
+      const isContributor = currentUser.role === "CONTRIBUTOR";
+      if (!isContributor || existing.authorId !== currentUser.id) return jsonError("Forbidden", 403);
+    }
 
     await prisma.article.delete({ where: { id } });
     return NextResponse.json({ ok: true });

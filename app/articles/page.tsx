@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Check, Eye, PenLine, Share, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, Check, Eye, Newspaper, PenLine, Share, SlidersHorizontal } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -12,8 +12,10 @@ type TabKey = "All posts" | "Featured";
 type ApiAuthor = {
   id: string;
   username: string;
-  role: "ADMIN" | "USER";
+  role: "ADMIN" | "USER" | "CONTRIBUTOR";
 };
+
+type ViewerRole = ApiAuthor["role"] | null;
 
 type ApiArticle = {
   id: string;
@@ -46,6 +48,50 @@ type ArticleCard = {
   image: string;
   avatar?: string;
 };
+
+type NewsCard = {
+  id: string;
+  source: string;
+  title: string;
+  date: string;
+  href: string;
+  image: string;
+};
+
+const MOCK_NEWS: NewsCard[] = [
+  {
+    id: "n-1",
+    source: "Market",
+    title: "Stablecoin flows rise as traders de-risk ahead of volatility",
+    date: "2026-04-12",
+    href: "https://www.coindesk.com/",
+    image: "https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=256&q=80",
+  },
+  {
+    id: "n-2",
+    source: "Protocols",
+    title: "Lending rates compress while onchain leverage rotates to perps",
+    date: "2026-04-10",
+    href: "https://thedefiant.io/",
+    image: "https://images.unsplash.com/photo-1559526324-593bc073d938?w=256&q=80",
+  },
+  {
+    id: "n-3",
+    source: "Security",
+    title: "Checklist: what to verify before approving a new contract",
+    date: "2026-04-08",
+    href: "https://rekt.news/",
+    image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=256&q=80",
+  },
+  {
+    id: "n-4",
+    source: "Ecosystem",
+    title: "DEX liquidity migrates to new incentives — what it changes for LPs",
+    date: "2026-04-05",
+    href: "https://coinmarketcap.com/",
+    image: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=256&q=80",
+  },
+];
 
 const MOCK_ARTICLES: ArticleCard[] = [
   {
@@ -199,6 +245,7 @@ export default function ArticlesPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [apiArticles, setApiArticles] = useState<ApiArticle[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [viewerRole, setViewerRole] = useState<ViewerRole>(null);
   const filterRef = useRef<HTMLDivElement>(null);
 
   const apiUrl = useMemo(() => {
@@ -313,6 +360,58 @@ export default function ArticlesPage() {
     return () => window.removeEventListener("pointerdown", onPointerDown);
   }, [filterOpen]);
 
+  useEffect(() => {
+    let active = true;
+    const refreshRole = async () => {
+      try {
+        const debugAuth =
+          typeof window !== "undefined" &&
+          new URLSearchParams(window.location.search).has("debugAuth");
+        const res = await fetch("/api/check", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!active) return;
+        if (!res.ok) {
+          if (debugAuth) console.debug("[auth] articles check -> no role", res.status);
+          setViewerRole(null);
+          return;
+        }
+        const body = (await res.json().catch(() => null)) as
+          | { allowed?: boolean; user?: { role?: ApiAuthor["role"] } }
+          | null;
+        if (body?.allowed && body.user?.role) {
+          if (debugAuth) console.debug("[auth] articles check -> role", body.user.role);
+          setViewerRole(body.user.role);
+          return;
+        }
+        if (debugAuth) console.debug("[auth] articles check -> no role (allowed=false)");
+        setViewerRole(null);
+      } catch {
+        if (!active) return;
+        try {
+          const debugAuth =
+            typeof window !== "undefined" &&
+            new URLSearchParams(window.location.search).has("debugAuth");
+          if (debugAuth) console.debug("[auth] articles check -> no role (error)");
+        } catch {
+        }
+        setViewerRole(null);
+      }
+    };
+    void refreshRole();
+    const onFocus = () => void refreshRole();
+    const onAuthChanged = () => void refreshRole();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("auth-changed", onAuthChanged);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("auth-changed", onAuthChanged);
+    };
+  }, []);
+
   return (
     <main className="flex-1 bg-[#0f0f0f] text-white">
       <section className="mx-auto max-w-6xl px-6 pt-10 pb-14">
@@ -348,80 +447,92 @@ export default function ArticlesPage() {
                 })}
               </div>
 
-              <div ref={filterRef} className="relative pb-3">
-                <button
-                  type="button"
-                  onClick={() => setFilterOpen((v) => !v)}
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/4 px-3 py-1.5 text-[12px] text-neutral-300 transition-colors hover:bg-white/8",
-                    filterOpen && "bg-white/8"
-                  )}
-                  aria-haspopup="menu"
-                  aria-expanded={filterOpen}
-                >
-                  <SlidersHorizontal size={14} className="text-neutral-400" />
-                  Filtrar
-                </button>
-
-                {filterOpen ? (
-                  <div
-                    role="menu"
-                    className="absolute right-0 top-full z-20 mt-2 w-64 rounded-2xl border border-white/[0.07] bg-[#0f0f0f] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.55)]"
+              <div className="flex items-center gap-3 pb-3">
+                {viewerRole === "CONTRIBUTOR" ? (
+                  <Link
+                    href="/articles/create"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/4 px-3 py-1.5 text-[12px] text-neutral-300 transition-colors hover:bg-white/8 hover:text-white"
                   >
-                    <div className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-neutral-500">
-                      Tópicos
-                    </div>
-
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setActiveTag("All");
-                        setFilterOpen(false);
-                      }}
-                      className={cn(
-                        "flex w-full items-center justify-between rounded-xl px-3 py-2 text-[13px] transition-colors",
-                        activeTag === "All"
-                          ? "bg-white/8 text-white"
-                          : "text-neutral-300 hover:bg-white/6"
-                      )}
-                    >
-                      <span>All</span>
-                      {activeTag === "All" ? (
-                        <Check size={14} className="text-neutral-300" />
-                      ) : null}
-                    </button>
-
-                    {tabTagStats.map(({ tag, count }) => {
-                      const active = tag === activeTag;
-                      return (
-                        <button
-                          key={tag}
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            setActiveTag(tag);
-                            setFilterOpen(false);
-                          }}
-                          className={cn(
-                            "flex w-full items-center justify-between rounded-xl px-3 py-2 mt-2 text-[13px] transition-colors",
-                            active
-                              ? "bg-white/8 text-white"
-                              : "text-neutral-300 hover:bg-white/6"
-                          )}
-                        >
-                          <span className="truncate">{tag}</span>
-                          <span className="flex items-center gap-2 text-neutral-500">
-                            <span className="text-[12px]">{count}</span>
-                            {active ? (
-                              <Check size={14} className="text-neutral-300" />
-                            ) : null}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                    <PenLine size={14} className="text-neutral-400" />
+                    Create
+                  </Link>
                 ) : null}
+
+                <div ref={filterRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setFilterOpen((v) => !v)}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/4 px-3 py-1.5 text-[12px] text-neutral-300 transition-colors hover:bg-white/8",
+                      filterOpen && "bg-white/8"
+                    )}
+                    aria-haspopup="menu"
+                    aria-expanded={filterOpen}
+                  >
+                    <SlidersHorizontal size={14} className="text-neutral-400" />
+                    Filtrar
+                  </button>
+
+                  {filterOpen ? (
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-full z-20 mt-2 w-64 rounded-2xl border border-white/[0.07] bg-[#0f0f0f] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.55)]"
+                    >
+                      <div className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-neutral-500">
+                        Tópicos
+                      </div>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setActiveTag("All");
+                          setFilterOpen(false);
+                        }}
+                        className={cn(
+                          "flex w-full items-center justify-between rounded-xl px-3 py-2 text-[13px] transition-colors",
+                          activeTag === "All"
+                            ? "bg-white/8 text-white"
+                            : "text-neutral-300 hover:bg-white/6"
+                        )}
+                      >
+                        <span>All</span>
+                        {activeTag === "All" ? (
+                          <Check size={14} className="text-neutral-300" />
+                        ) : null}
+                      </button>
+
+                      {tabTagStats.map(({ tag, count }) => {
+                        const active = tag === activeTag;
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setActiveTag(tag);
+                              setFilterOpen(false);
+                            }}
+                            className={cn(
+                              "flex w-full items-center justify-between rounded-xl px-3 py-2 text-[13px] transition-colors",
+                              active
+                                ? "bg-white/8 text-white"
+                                : "text-neutral-300 hover:bg-white/6"
+                            )}
+                          >
+                            <span className="truncate">{tag}</span>
+                            <span className="flex items-center gap-2 text-neutral-500">
+                              <span className="text-[12px]">{count}</span>
+                              {active ? (
+                                <Check size={14} className="text-neutral-300" />
+                              ) : null}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
 
@@ -499,39 +610,90 @@ export default function ArticlesPage() {
 
           <aside className="hidden lg:block">
             <div className="sticky top-24">
-              <div className="rounded-2xl border border-white/[0.07] bg-white/2 p-6">
-                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-neutral-500">
-                  <PenLine size={14} className="text-neutral-600" />
-                  Contribua
-                </div>
-                <h3 className="mt-3 text-[18px] font-semibold leading-[1.25] tracking-tight text-white">
-                  Venha escrever para o DeFi Institute
-                </h3>
-                <p className="mt-2 text-[13px] leading-6 text-neutral-400">
-                  Publique guias, análises e frameworks práticos. A gente ajuda com
-                  edição, padrão visual e distribuição.
-                </p>
-                <ul className="mt-4 space-y-2 text-[13px] text-neutral-400">
-                  <li className="flex gap-2">
-                    <span className="mt-2 size-1.5 rounded-full bg-white/25" />
-                    <span>Temas: mecânicas, risco, segurança, estratégia</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="mt-2 size-1.5 rounded-full bg-white/25" />
-                    <span>Formato: direto ao ponto, com exemplos</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="mt-2 size-1.5 rounded-full bg-white/25" />
-                    <span>Crédito e autoria preservados</span>
-                  </li>
-                </ul>
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-white/[0.07] bg-white/2 p-6">
+                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-neutral-500">
+                    <Newspaper size={14} className="text-neutral-600" />
+                    Notícias
+                  </div>
 
-                <Link
-                  href="/login"
-                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-black hover:bg-neutral-100 transition-colors"
-                >
-                  Quero escrever <ArrowRight size={14} />
-                </Link>
+                  <div className="mt-4 space-y-4">
+                    {MOCK_NEWS.map((item) => (
+                      <a
+                        key={item.id}
+                        href={item.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group block"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex min-w-0 items-start gap-3">
+                            <div className="relative mt-1 h-16 w-16 shrink-0 overflow-hidden bg-white/4">
+                              <Image
+                                src={item.image}
+                                alt={item.title}
+                                fill
+                                sizes="64px"
+                                className="object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/10" />
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex items-center justify-between gap-3 text-[12px] text-neutral-500">
+                                <span className="truncate">{item.source}</span>
+                                <time
+                                  dateTime={item.date}
+                                  className="shrink-0 text-neutral-600 tabular-nums"
+                                >
+                                  {formatDateShort(item.date)}
+                                </time>
+                              </div>
+                              <div className="mt-2 text-[13px] font-medium leading-6 text-neutral-200 transition-colors group-hover:text-white line-clamp-2">
+                                {item.title}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/[0.07] bg-white/2 p-6">
+                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-neutral-500">
+                    <PenLine size={14} className="text-neutral-600" />
+                    Contribua
+                  </div>
+                  <h3 className="mt-3 text-[18px] font-semibold leading-[1.25] tracking-tight text-white">
+                    Venha escrever para o DeFi Institute
+                  </h3>
+                  <p className="mt-2 text-[13px] leading-6 text-neutral-400">
+                    Publique guias, análises e frameworks práticos. A gente ajuda com
+                    edição, padrão visual e distribuição.
+                  </p>
+                  <ul className="mt-4 space-y-2 text-[13px] text-neutral-400">
+                    <li className="flex gap-2">
+                      <span className="mt-2 size-1.5 rounded-full bg-white/25" />
+                      <span>Temas: mecânicas, risco, segurança, estratégia</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="mt-2 size-1.5 rounded-full bg-white/25" />
+                      <span>Formato: direto ao ponto, com exemplos</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="mt-2 size-1.5 rounded-full bg-white/25" />
+                      <span>Crédito e autoria preservados</span>
+                    </li>
+                  </ul>
+
+                  <Link
+                    href="/login"
+                    className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-black hover:bg-neutral-100 transition-colors"
+                  >
+                    Quero escrever <ArrowRight size={14} />
+                  </Link>
+                </div>
               </div>
             </div>
           </aside>

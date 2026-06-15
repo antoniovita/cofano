@@ -13,7 +13,7 @@ import { MOCK_ARTICLES, type MockArticle } from "./mockArticles";
 type ApiAuthor = {
   id: string;
   username: string;
-  role: "ADMIN" | "USER";
+  role: "ADMIN" | "USER" | "CONTRIBUTOR";
 };
 
 type ApiArticle = {
@@ -364,6 +364,11 @@ export default function ArticlePageClient({ id }: { id: string }) {
         }
         setApiArticle(data);
         setStatus("ready");
+        fetch(`/api/articles?id=${encodeURIComponent(id)}&incrementViews=true`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ incrementViews: true }),
+        }).catch(() => {});
       })
       .catch((err) => {
         if ((err as { name?: string }).name === "AbortError") return;

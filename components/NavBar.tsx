@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Globe, Menu, Moon, Search, Sun } from "lucide-react";
+import { Globe, Menu, Moon, Search, Sun, UserCircle } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,8 @@ type NavItem = { href: string; label: string };
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Home" },
-  { href: "/articles", label: "Articles" },
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/learn", label: "Learn" },
+  { href: "/research", label: "Research" },
+  { href: "/portfolio", label: "Portfolio" },
 ];
 
 type ThemeMode = "dark" | "light";
@@ -25,6 +24,11 @@ type LanguageOption = {
   label: string;
   name: string;
 };
+
+type AuthState =
+  | { status: "unknown" }
+  | { status: "guest" }
+  | { status: "authed"; username?: string };
 
 const LANGUAGES: LanguageOption[] = [
   { code: "pt", label: "PT", name: "Português" },
@@ -178,13 +182,74 @@ export function NavBar() {
   const [scrolled, setScrolled] = useState(false);
   const [query, setQuery] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [auth, setAuth] = useState<AuthState>({ status: "unknown" });
   const isSearchRoute = useMemo(() => pathname === "/search", [pathname]);
+  const isLoginRoute = useMemo(() => pathname === "/login", [pathname]);
+  const isAccountRoute = useMemo(() => pathname === "/account", [pathname]);
+  const loginHref = useMemo(() => {
+    if (!pathname || pathname === "/login") return "/login";
+    return `/login?next=${encodeURIComponent(pathname)}`;
+  }, [pathname]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    const refreshAuth = async () => {
+      try {
+        const debugAuth =
+          typeof window !== "undefined" &&
+          new URLSearchParams(window.location.search).has("debugAuth");
+        const res = await fetch("/api/check", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!active) return;
+        if (!res.ok) {
+          if (debugAuth) console.debug("[auth] navbar check -> guest", res.status);
+          setAuth({ status: "guest" });
+          return;
+        }
+        const body = (await res.json().catch(() => null)) as
+          | { allowed?: boolean; user?: { username?: string } }
+          | null;
+        if (body?.allowed) {
+          if (debugAuth) console.debug("[auth] navbar check -> authed", body.user?.username);
+          setAuth({ status: "authed", username: body.user?.username });
+          return;
+        }
+        if (debugAuth) console.debug("[auth] navbar check -> guest (allowed=false)");
+        setAuth({ status: "guest" });
+      } catch {
+        if (!active) return;
+        try {
+          const debugAuth =
+            typeof window !== "undefined" &&
+            new URLSearchParams(window.location.search).has("debugAuth");
+          if (debugAuth) console.debug("[auth] navbar check -> guest (error)");
+        } catch {
+        }
+        setAuth({ status: "guest" });
+      }
+    };
+
+    void refreshAuth();
+
+    const onFocus = () => void refreshAuth();
+    const onAuthChanged = () => void refreshAuth();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("auth-changed", onAuthChanged);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("auth-changed", onAuthChanged);
+    };
+  }, [pathname]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,7 +271,7 @@ export function NavBar() {
             className="text-white text-[18px] font-medium tracking-tight sm:text-[19px]"
             style={{ fontFamily: '"Georgia Pro", Georgia, serif' }}
           >
-            DeFi Institute
+            Cofano
           </h1>
         </Link>
 
@@ -253,6 +318,32 @@ export function NavBar() {
           ) : null}
 
           <PillControls />
+
+          {auth.status === "authed" ? (
+            <Link
+              href="/account"
+              aria-current={isAccountRoute ? "page" : undefined}
+              className={cn(
+                "inline-flex px-2.5 py-2.5 items-center gap-2 rounded-full border border-white/7 bg-white/2 text-[13px] font-medium tracking-wide transition-colors",
+                isAccountRoute ? "text-white bg-white/8" : "text-neutral-300 hover:text-white hover:bg-white/6"
+              )}
+              title="Account"
+              aria-label="Account"
+            >
+              <UserCircle size={16} className="text-neutral-400" />
+            </Link>
+          ) : (
+            <Link
+              href={loginHref}
+              aria-current={isLoginRoute ? "page" : undefined}
+              className={cn(
+                "inline-flex h-9 items-center rounded-full border border-white/7 bg-white/2 px-4 text-[13px] font-medium tracking-wide transition-colors",
+                isLoginRoute ? "text-white bg-white/8" : "text-neutral-300 hover:text-white hover:bg-white/6"
+              )}
+            >
+              Login
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center sm:hidden">
@@ -273,7 +364,7 @@ export function NavBar() {
                     className="text-white text-lg font-medium tracking-tight"
                     style={{ fontFamily: '"Georgia Pro", Georgia, serif' }}
                   >
-                    DeFi Institute
+                    Cofano
                   </h1>
                 </div>
                 <div className="flex flex-col px-3 pt-4 gap-0.5">
@@ -293,6 +384,35 @@ export function NavBar() {
                       </Link>
                     );
                   })}
+
+                  <Link
+                    href={auth.status === "authed" ? "/account" : loginHref}
+                    aria-current={
+                      auth.status === "authed"
+                        ? isAccountRoute
+                          ? "page"
+                          : undefined
+                        : isLoginRoute
+                          ? "page"
+                          : undefined
+                    }
+                    onClick={() => setSheetOpen(false)}
+                    className={cn(
+                      "flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                      auth.status === "authed" ? isAccountRoute : isLoginRoute
+                        ? "text-white bg-white/8"
+                        : "text-neutral-300 hover:text-white hover:bg-white/6"
+                    )}
+                  >
+                    {auth.status === "authed" ? (
+                      <span className="flex items-center gap-2">
+                        <UserCircle size={16} className="text-neutral-400" />
+                        Account
+                      </span>
+                    ) : (
+                      "Login"
+                    )}
+                  </Link>
                 </div>
 
                 <div className="mt-auto border-t border-white/6 px-4 py-4">

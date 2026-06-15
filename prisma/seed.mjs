@@ -42,12 +42,12 @@ async function main() {
     where: { username: 'antonio' },
     update: {
       passwordHash: userPassword,
-      role: Role.USER,
+      role: Role.CONTRIBUTOR,
     },
     create: {
       username: 'antonio',
       passwordHash: userPassword,
-      role: Role.USER,
+      role: Role.CONTRIBUTOR,
     },
   })
 

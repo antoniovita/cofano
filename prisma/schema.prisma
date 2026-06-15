@@ -9,34 +9,98 @@ datasource db {
 enum Role {
   ADMIN
   USER
+  CONTRIBUTOR
+}
+
+enum Theme {
+  DARK 
+  LIGHT
 }
 
 model User {
-  id           String    @id @default(uuid()) @db.Uuid
-  username     String    @unique
+  id           String   @id @default(uuid()) @db.Uuid
+  username     String   @unique
+  email        String?  @unique
   passwordHash String
-  role         Role      @default(USER)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  locale       String @default("pt")
+  theme        Theme  @default(DARK)
+  
 
-  articles     Article[]
+  articles Article[] @relation("ArticleAuthor")
+  news     News[]    @relation("NewsAuthor")
+
+  savedArticles SavedArticle[]
+  likedArticles ArticleLike[]
+
+  savedNews SavedNews[]
+  likedNews NewsLike[]
 
   @@map("users")
 }
 
+model NewsTranslation {
+  id     String @id @default(uuid()) @db.Uuid
+  locale String
+
+  title              String
+  content            String
+  wordCount          Int    @default(0)
+  readingTimeMinutes Int    @default(0)
+
+  newsId String @db.Uuid
+  news   News   @relation(fields: [newsId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([newsId, locale])
+  @@index([locale])
+  @@map("news_translations")
+}
+
+model News {
+  id            String  @id @default(uuid()) @db.Uuid
+  tag           String
+  cover         String
+  published     Boolean @default(false)
+  views         Int     @default(0)
+  defaultLocale String  @default("pt")
+  featured      Boolean @default(false)
+
+  translations NewsTranslation[]
+
+  authorId String @db.Uuid
+  author   User   @relation("NewsAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  savedBy SavedNews[]
+  likedBy NewsLike[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([authorId])
+  @@map("news")
+}
+
 model Article {
-  id        String   @id @default(uuid()) @db.Uuid
-  tag       String
-  cover     String
-  published Boolean  @default(false)
-  views     Int
-  defaultLocale String @default("pt")
-  featured  Boolean
+  id            String  @id @default(uuid()) @db.Uuid
+  tag           String
+  cover         String
+  published     Boolean @default(false)
+  views         Int     @default(0)
+  defaultLocale String  @default("pt")
+  featured      Boolean @default(false)
 
   translations ArticleTranslation[]
 
-  authorId  String   @db.Uuid
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId String @db.Uuid
+  author   User   @relation("ArticleAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  savedBy SavedArticle[]
+  likedBy ArticleLike[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -46,13 +110,13 @@ model Article {
 }
 
 model ArticleTranslation {
-  id        String  @id @default(uuid()) @db.Uuid
-  locale    String
+  id     String @id @default(uuid()) @db.Uuid
+  locale String
 
-  title     String
-  content   String
-  wordCount Int     @default(0)
-  readingTimeMinutes Int @default(0)
+  title              String
+  content            String
+  wordCount          Int    @default(0)
+  readingTimeMinutes Int    @default(0)
 
   articleId String  @db.Uuid
   article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
@@ -63,4 +127,56 @@ model ArticleTranslation {
   @@unique([articleId, locale])
   @@index([locale])
   @@map("article_translations")
+}
+
+model SavedArticle {
+  userId    String   @db.Uuid
+  articleId String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, articleId])
+  @@index([articleId])
+  @@map("saved_articles")
+}
+
+model ArticleLike {
+  userId    String   @db.Uuid
+  articleId String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, articleId])
+  @@index([articleId])
+  @@map("article_likes")
+}
+
+model SavedNews {
+  userId    String   @db.Uuid
+  newsId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  news News @relation(fields: [newsId], references: [id], onDelete: Cascade)
+
+  @@id([userId, newsId])
+  @@index([newsId])
+  @@map("saved_news")
+}
+
+model NewsLike {
+  userId    String   @db.Uuid
+  newsId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  news News @relation(fields: [newsId], references: [id], onDelete: Cascade)
+
+  @@id([userId, newsId])
+  @@index([newsId])
+  @@map("news_likes")
 }

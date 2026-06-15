@@ -8,4 +8,3 @@ export default async function ArticlePage({
   const { id } = await params;
   return <ArticlePageClient id={id} />;
 }
-
