@@ -7,6 +7,29 @@ import { ArrowRight, Check, Eye, Newspaper, PenLine, Share, SlidersHorizontal } 
 
 import { cn } from "@/lib/utils";
 
+function ArticleSkeleton() {
+  return (
+    <div className="divide-y divide-white/6">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <div key={i} className="py-9 flex items-start justify-between gap-8 animate-pulse">
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="h-2.5 w-24 rounded-full bg-white/6" />
+            <div className="h-7 w-3/4 rounded-lg bg-white/6" />
+            <div className="h-7 w-1/2 rounded-lg bg-white/6" />
+            <div className="h-4 w-full rounded-full bg-white/4" />
+            <div className="h-4 w-2/3 rounded-full bg-white/4" />
+            <div className="mt-2 flex gap-4">
+              <div className="h-3 w-16 rounded-full bg-white/4" />
+              <div className="h-3 w-16 rounded-full bg-white/4" />
+            </div>
+          </div>
+          <div className="hidden h-24 w-40 shrink-0 rounded-lg bg-white/6 sm:block" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 type TabKey = "All posts" | "Featured";
 
 type ApiAuthor = {
@@ -316,7 +339,7 @@ export default function ArticlesPage() {
         readTime: `${readMinutes} min`,
         views: formatCompactNumber(article.views || 0),
         comments: "",
-        image: article.cover,
+        image: article.cover || "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=900&q=80",
         avatar: `https://api.dicebear.com/9.x/identicon/svg?seed=${encodeURIComponent(
           article.author?.id || article.id
         )}`,
@@ -536,76 +559,83 @@ export default function ArticlesPage() {
               </div>
             </div>
 
-            <div className="divide-y divide-white/6">
-              {visibleArticles.length === 0 ? (
-                <div className="py-16">
-                  <div className="rounded-2xl border border-white/[0.07] bg-white/2 p-8">
-                    <div className="text-[12px] uppercase tracking-[0.2em] text-neutral-500">
-                      {loading ? "Carregando" : "Sem resultados"}
+            {loading ? (
+              <ArticleSkeleton />
+            ) : (
+              <div className="divide-y divide-white/6">
+                {visibleArticles.length === 0 ? (
+                  <div className="py-16">
+                    <div className="rounded-2xl border border-white/[0.07] bg-white/2 p-8">
+                      <div className="text-[12px] uppercase tracking-[0.2em] text-neutral-500">
+                        Sem resultados
+                      </div>
+                      <p className="mt-3 text-[14px] leading-7 text-neutral-400">
+                        Nenhum artigo encontrado com esse filtro.
+                      </p>
                     </div>
-                    <p className="mt-3 text-[14px] leading-7 text-neutral-400">
-                      {loading
-                        ? "Buscando artigos no DeFi Institute…"
-                        : "Nenhum artigo encontrado com esse filtro."}
-                    </p>
                   </div>
-                </div>
-              ) : (
-                visibleArticles.map((article) => (
-                  <article key={article.id} className="py-9">
-                    <div className="flex items-start justify-between gap-8">
-                      <div className="min-w-0">
-                        <Link href={`/articles/${article.id}`} className="block">
-                          <h2 className="mt-3 text-[26px] font-semibold leading-[1.12] tracking-tight text-white">
-                            {article.title}
-                          </h2>
-                          <p className="mt-2 text-[15px] leading-7 text-neutral-400 line-clamp-2">
-                            {article.excerpt}
-                          </p>
-                        </Link>
+                ) : (
+                  visibleArticles.map((article) => (
+                    <article key={article.id} className="py-9">
+                      <div className="flex items-start justify-between gap-8">
+                        <div className="min-w-0">
+                          <Link href={`/articles/${article.id}`} className="block">
+                            <h2 className="mt-3 text-[26px] font-semibold leading-[1.12] tracking-tight text-white">
+                              {article.title}
+                            </h2>
+                            <p className="mt-2 text-[15px] leading-7 text-neutral-400 line-clamp-2">
+                              {article.excerpt}
+                            </p>
+                          </Link>
 
-                        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px] text-neutral-500">
-                          <div className="inline-flex items-center gap-2">
-                            <span>{article.date}</span>
-                            <span className="text-neutral-700">·</span>
-                            <span>{article.readTime} read</span>
-                            <span className="text-neutral-700">·</span>
-                            <span className="rounded-full border border-white/10 bg-white/4 px-2 py-0.5 text-[11px] text-neutral-200">
-                              {article.tag}
-                            </span>
-                          </div>
-
-                          <div className="ml-auto flex items-center gap-4 text-neutral-500">
-                            <div className="flex items-center gap-1">
-                              <Eye size={16} />
-                              {article.views}
+                          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px] text-neutral-500">
+                            <div className="inline-flex items-center gap-2">
+                              <span>{article.date}</span>
+                              <span className="text-neutral-700">·</span>
+                              <span>{article.readTime} read</span>
+                              <span className="text-neutral-700">·</span>
+                              <span className="rounded-full border border-white/10 bg-white/4 px-2 py-0.5 text-[11px] text-neutral-200">
+                                {article.tag}
+                              </span>
                             </div>
-                            <button
-                              type="button"
-                              className="rounded-md p-1 hover:bg-white/8 transition-colors"
-                              aria-label="Mais ações"
-                            >
-                              <Share size={16} />
-                            </button>
+
+                            <div className="ml-auto flex items-center gap-4 text-neutral-500">
+                              <div className="flex items-center gap-1">
+                                <Eye size={16} />
+                                {article.views}
+                              </div>
+                              <button
+                                type="button"
+                                className="rounded-md p-1 hover:bg-white/8 transition-colors"
+                                aria-label="Mais ações"
+                              >
+                                <Share size={16} />
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="relative hidden h-24 w-40 shrink-0 overflow-hidden sm:block">
-                        <Image
-                          src={article.image}
-                          alt={article.title}
-                          fill
-                          sizes="160px"
-                          className="object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/10" />
+                        <div className="relative hidden h-24 w-40 shrink-0 overflow-hidden sm:block bg-white/4">
+                          {article.image && (
+                            <Image
+                              src={article.image}
+                              alt={article.title}
+                              fill
+                              sizes="160px"
+                              className="object-cover opacity-0 transition-opacity duration-500"
+                              onLoad={(e) => {
+                                (e.currentTarget as HTMLImageElement).classList.remove("opacity-0");
+                              }}
+                            />
+                          )}
+                          <div className="absolute inset-0 bg-black/10" />
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                ))
-              )}
-            </div>
+                    </article>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           <aside className="hidden lg:block">

@@ -366,14 +366,26 @@ export default function ResearchPageClient({ id }: { id: string }) {
           <Link href="/research" className="text-[14px] text-neutral-400 hover:text-neutral-200 transition-colors">
             ← Back to research
           </Link>
-          <div className="mt-10 rounded-2xl border border-white/[0.07] bg-white/2 p-8">
-            <div className="text-[12px] uppercase tracking-[0.2em] text-neutral-500">
-              {status === "loading" ? "Carregando" : "Não encontrado"}
+          {status === "loading" ? (
+            <div className="mt-8 animate-pulse space-y-4">
+              <div className="h-44 w-full rounded-xl bg-white/6 sm:h-56" />
+              <div className="mt-7 space-y-3">
+                <div className="h-3 w-20 rounded-full bg-white/6" />
+                <div className="h-10 w-3/4 rounded-lg bg-white/6" />
+                <div className="h-8 w-1/2 rounded-lg bg-white/6" />
+              </div>
+              <div className="mt-10 space-y-3">
+                {[0,1,2,3,4].map((i) => (
+                  <div key={i} className="h-4 rounded-full bg-white/4" style={{ width: `${90 - i * 8}%` }} />
+                ))}
+              </div>
             </div>
-            <p className="mt-3 text-[14px] leading-7 text-neutral-400">
-              {status === "loading" ? "Buscando artigo…" : "Esse artigo não existe ou foi removido."}
-            </p>
-          </div>
+          ) : (
+            <div className="mt-10 rounded-2xl border border-white/[0.07] bg-white/2 p-8">
+              <div className="text-[12px] uppercase tracking-[0.2em] text-neutral-500">Não encontrado</div>
+              <p className="mt-3 text-[14px] leading-7 text-neutral-400">Esse artigo não existe ou foi removido.</p>
+            </div>
+          )}
         </section>
       </main>
     );

@@ -1,13 +1,17 @@
 "use client";
 
+import { useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
   Check,
   ChevronRight,
+  HandCoins,
   ShieldCheck,
   Wallet,
   Zap,
 } from "lucide-react";
+import { ConnectWalletModal } from "@/components/ConnectWalletModal";
 
 import { Badge } from "@/components/ui/Badge";
 import { Btn } from "@/components/ui/Btn";
@@ -125,11 +129,14 @@ const riskLevelColor: Record<RiskLevel, string> = {
 };
 
 export default function PortfolioPage() {
+  const [modalOpen, setModalOpen] = useState(false);
+
   return (
+    <>
     <main className="flex-1 bg-[#0f0f0f] text-white">
 
       {/* Hero — Risk Score */}
-      <section className="mx-auto max-w-6xl px-6 pt-16 pb-12">
+      <section className="mx-auto max-w-6xl px-6 pt-14 pb-12">
         <div className="grid gap-12 lg:grid-cols-[1fr_480px] lg:items-start">
 
           {/* Left: copy + gauge */}
@@ -155,7 +162,7 @@ export default function PortfolioPage() {
             </div>
 
             <div className="mt-10 flex flex-wrap items-center gap-8">
-              <Btn variant="primary">
+              <Btn variant="primary" onClick={() => setModalOpen(true)}>
                 <Wallet size={14} /> Connect wallet
               </Btn>
               <a
@@ -224,6 +231,61 @@ export default function PortfolioPage() {
               </div>
             </Card>
           </div>
+        </div>
+      </section>
+
+      {/* Manual positions */}
+      <section className="mx-auto max-w-6xl px-6 py-14 border-t border-white/5">
+        <div className="grid gap-10 lg:grid-cols-[1fr_1fr] lg:items-center">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">No wallet?</p>
+            <h2 className="mt-3 text-[1.8rem] font-semibold leading-tight tracking-tight">
+              Use a CEX or exchange?
+              <br />
+              <span className="text-neutral-400">Enter your positions manually.</span>
+            </h2>
+            <p className="mt-4 max-w-md text-[15px] leading-7 text-neutral-400">
+              You don&apos;t need an on-chain wallet to use Cofano. Add your assets manually — exchange, asset, and exposure type — and get the same complete risk report.
+            </p>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Btn variant="secondary" onClick={() => setModalOpen(true)}>
+                <HandCoins size={14} /> Enter positions manually <ChevronRight size={14} />
+              </Btn>
+              <Btn variant="ghost">
+                Learn more <ChevronRight size={14} />
+              </Btn>
+            </div>
+            <p className="mt-4 text-[12px] text-neutral-700">
+              Works with Binance, Coinbase, Kraken and any CEX · Data stays in your browser
+            </p>
+          </div>
+
+          <Card className="p-6">
+            <div className="mb-4 text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+              Manual entry example
+            </div>
+            <div className="space-y-2">
+              {[
+                { asset: "BTC",  exchange: "Binance",  type: "Spot",    value: "$12,400" },
+                { asset: "ETH",  exchange: "Coinbase", type: "Spot",    value: "$5,200"  },
+                { asset: "USDC", exchange: "Kraken",   type: "Staking", value: "$3,800"  },
+              ].map((row) => (
+                <div
+                  key={row.asset + row.exchange}
+                  className="flex items-center justify-between rounded-lg border border-white/5 bg-white/2 px-3 py-2.5"
+                >
+                  <div>
+                    <div className="text-[13px] font-medium text-neutral-200">{row.asset}</div>
+                    <div className="text-[11px] text-neutral-600">{row.exchange} · {row.type}</div>
+                  </div>
+                  <div className="font-mono text-[13px] text-white">{row.value}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex items-center gap-2 rounded-lg border border-dashed border-white/10 px-3 py-2.5 text-[12px] text-neutral-600">
+              <span className="text-base leading-none">+</span> Add position
+            </div>
+          </Card>
         </div>
       </section>
 
@@ -296,5 +358,9 @@ export default function PortfolioPage() {
 
 
     </main>
+    <AnimatePresence>
+      {modalOpen && <ConnectWalletModal onClose={() => setModalOpen(false)} />}
+    </AnimatePresence>
+    </>
   );
 }

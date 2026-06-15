@@ -58,7 +58,7 @@ export function LoginPanel({
   useEffect(() => {
     let active = true;
 
-    const run = async () => {
+    const t = window.setTimeout(async () => {
       try {
         const res = await fetch("/api/check", { method: "GET" });
         if (!active) return;
@@ -68,16 +68,17 @@ export function LoginPanel({
         }
       } catch {
       }
-    };
+    }, 220);
 
-    void run();
     return () => {
       active = false;
+      window.clearTimeout(t);
     };
   }, [redirectTo, router, variant]);
 
   useEffect(() => {
-    queueMicrotask(() => usernameRef.current?.focus());
+    const t = window.setTimeout(() => usernameRef.current?.focus(), 220);
+    return () => window.clearTimeout(t);
   }, []);
 
   const canSubmit =
