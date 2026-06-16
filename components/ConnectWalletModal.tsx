@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Wallet, ArrowRight, ChevronRight, ShieldCheck, Zap, Check, Lock, CreditCard, Copy, CheckCheck } from "lucide-react";
 import { Btn } from "@/components/ui/Btn";
 import { QRCodeSVG } from "qrcode.react";
+import { Badge } from "./ui/Badge";
 
 const MOCK_ADDRESS = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F";
 
@@ -480,7 +481,10 @@ export function ConnectWalletModal({ onClose }: Props) {
               </div>
 
               <div className="mt-6">
-                <p className="mb-2.5 text-[11px] text-neutral-600">Try with a known wallet</p>
+                <div className="flex flex-row items-center justify-between mb-2.5">
+                  <p className="text-[11px] text-neutral-600">Try with a known wallet</p>
+                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400 ring-1 ring-emerald-500/20">Free</span>
+                </div>
                 <div className="space-y-1.5">
                   {KNOWN_WALLETS.map((w) => (
                     <button

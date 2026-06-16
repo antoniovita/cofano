@@ -1,209 +1,85 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-
-type LoginErrorCode =
-  | "missing_credentials"
-  | "invalid_credentials"
-  | "server_misconfigured";
-
-function isSafeNextPath(value: string | null): value is string {
-  if (!value) return false;
-  if (!value.startsWith("/")) return false;
-  if (value.startsWith("//")) return false;
-  return true;
-}
-
-function getErrorMessage(code: LoginErrorCode | string) {
-  switch (code) {
-    case "missing_credentials":
-      return "Preencha usuário e senha para continuar.";
-    case "invalid_credentials":
-      return "Usuário ou senha inválidos.";
-    case "server_misconfigured":
-      return "Servidor indisponível no momento. Tente novamente em instantes.";
-    default:
-      return "Não foi possível entrar. Tente novamente.";
-  }
-}
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function LoginPanel({
   variant = "modal",
-  next,
+  onClose,
 }: {
   variant?: "modal" | "page";
   next?: string | null;
+  onClose?: () => void;
 }) {
-  const router = useRouter();
-  const usernameRef = useRef<HTMLInputElement>(null);
-  const nextValue: string | null = next ?? null;
-
-  const redirectTo = useMemo(() => {
-    if (isSafeNextPath(nextValue)) return nextValue;
-    return "/dashboard";
-  }, [nextValue]);
-
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(true);
 
   useEffect(() => {
-    let active = true;
-
-    const t = window.setTimeout(async () => {
-      try {
-        const res = await fetch("/api/check", { method: "GET" });
-        if (!active) return;
-        if (res.ok) {
-          if (variant === "modal") return;
-          router.replace(redirectTo);
-        }
-      } catch {
-      }
-    }, 220);
-
-    return () => {
-      active = false;
-      window.clearTimeout(t);
-    };
-  }, [redirectTo, router, variant]);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => usernameRef.current?.focus(), 220);
-    return () => window.clearTimeout(t);
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    return () => { document.documentElement.style.overflow = prev; };
   }, []);
 
-  const canSubmit =
-    username.trim().length > 0 && password.length > 0 && !submitting;
+  const canSubmit = username.trim().length > 0 && password.length > 0;
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!canSubmit) return;
-
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      const debugAuth =
-        typeof window !== "undefined" &&
-        new URLSearchParams(window.location.search).has("debugAuth");
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ username: username.trim(), password }),
-      });
-
-      if (res.ok) {
-        try {
-          window.dispatchEvent(new Event("auth-changed"));
-          if (debugAuth) console.debug("[auth] login ok -> dispatched auth-changed");
-        } catch {
-        }
-        router.replace(redirectTo);
-        return;
-      }
-
-      const body = (await res.json().catch(() => null)) as
-        | { ok?: boolean; error?: string }
-        | null;
-
-      setError(getErrorMessage(body?.error ?? "unknown"));
-    } catch {
-      setError("Falha de rede ao tentar entrar. Verifique sua conexão e tente novamente.");
-    } finally {
-      setSubmitting(false);
-    }
   };
 
-  return (
-    <div
-      className={cn(
-        variant === "page"
-          ? "rounded-2xl border border-white/[0.07] bg-white/2 p-6 sm:p-8"
-          : "p-0"
-      )}
-    >
-      <div className="flex items-start justify-between gap-6">
+  const close = () => {
+    setOpen(false);
+  };
 
-        <div className="hidden sm:flex items-center gap-4 text-[13px] text-neutral-500">
-          <button
-            type="button"
-            className="relative py-2 text-white transition-colors"
-            aria-current="page"
-          >
-            Log in
-            <span className="absolute left-0 -bottom-px h-[2px] w-full bg-white" />
-          </button>
-          <button
-            type="button"
-            className="relative py-2 transition-colors hover:text-neutral-200 disabled:opacity-60"
-            aria-disabled="true"
-            disabled
-            title="Em breve"
-          >
-            Sign up
-            <span className="absolute left-0 -bottom-px h-[2px] w-full bg-white opacity-0" />
-          </button>
-        </div>
-      </div>
+  const inner = (
+    <div className="flex flex-col p-8">
+      <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">Acesso</p>
+      <h2 className="mt-2 text-[1.4rem] font-semibold leading-tight tracking-tight text-white">
+        Entre na sua conta
+      </h2>
+      <p className="mt-2 text-[13px] leading-6 text-neutral-400">
+        Preencha suas credenciais para continuar.
+      </p>
 
-      <form onSubmit={onSubmit} className="mt-6 space-y-4" aria-busy={submitting}>
+      <form onSubmit={onSubmit} className="mt-6 space-y-3">
         <div>
-          <label
-            htmlFor="username"
-            className="block text-[11px] uppercase tracking-[0.2em] text-neutral-500"
-          >
+          <label className="mb-1.5 block text-[11px] text-neutral-500" htmlFor="username">
             Usuário
           </label>
-          <div className="relative mt-2">
-            <User
-              size={16}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500"
-            />
-            <Input
-              ref={usernameRef}
+          <div className="relative">
+            <User size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-600" />
+            <input
               id="username"
               name="username"
               autoComplete="username"
+              autoFocus
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="seu-usuario"
-              className="h-10 rounded-xl border border-white/[0.07] bg-white/2 pl-9 pr-3 text-[13px] text-neutral-200 placeholder:text-neutral-600 focus-visible:ring-0 focus-visible:border-white/[0.14]"
+              className="w-full rounded-xl border border-white/8 bg-white/2 py-3 pl-9 pr-4 font-mono text-[13px] text-white placeholder:text-neutral-700 focus:border-white/20 focus:outline-none"
             />
           </div>
         </div>
 
         <div>
           <div className="flex items-center justify-between gap-4">
-            <label
-              htmlFor="password"
-              className="block text-[11px] uppercase tracking-[0.2em] text-neutral-500"
-            >
+            <label className="text-[11px] text-neutral-500" htmlFor="password">
               Senha
             </label>
             <Link
               href="/learn"
-              className="text-[12px] text-neutral-500 hover:text-neutral-300 transition-colors"
+              className="text-[12px] text-neutral-500 transition-colors hover:text-neutral-300"
             >
               Esqueceu a senha?
             </Link>
           </div>
-
-          <div className="relative mt-2">
-            <Lock
-              size={16}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500"
-            />
-            <Input
+          <div className="relative mt-1.5">
+            <Lock size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-600" />
+            <input
               id="password"
               name="password"
               type={showPassword ? "text" : "password"}
@@ -211,7 +87,7 @@ export function LoginPanel({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="h-10 rounded-xl border border-white/[0.07] bg-white/2 pl-9 pr-11 text-[13px] text-neutral-200 placeholder:text-neutral-600 focus-visible:ring-0 focus-visible:border-white/[0.14]"
+              className="w-full rounded-xl border border-white/8 bg-white/2 py-3 pl-9 pr-11 font-mono text-[13px] text-white placeholder:text-neutral-700 focus:border-white/20 focus:outline-none"
             />
             <button
               type="button"
@@ -219,59 +95,93 @@ export function LoginPanel({
               aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
               onClick={() => setShowPassword((v) => !v)}
             >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
           </div>
         </div>
 
-        {error ? (
-          <div
-            role="alert"
-            className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] text-red-200"
-          >
-            {error}
-          </div>
-        ) : null}
-
         <button
           type="submit"
           disabled={!canSubmit}
-          className={cn(
-            "mt-1 inline-flex h-10 w-full items-center justify-center rounded-xl border border-white/[0.10] bg-white/8 px-4 text-[13px] font-medium text-white transition-colors hover:bg-white/10 active:translate-y-px disabled:pointer-events-none disabled:opacity-50",
-            submitting && "opacity-80"
-          )}
+          className="mt-1 inline-flex w-full items-center justify-center rounded-xl border border-white/8 bg-white/6 px-4 py-3 text-[13px] font-medium text-white transition-colors hover:bg-white/8 active:translate-y-px disabled:pointer-events-none disabled:opacity-50"
         >
-          {submitting ? "Entrando..." : "Entrar"}
+          Entrar
         </button>
-
-        <div className="pt-4">
-          <div className="flex items-center gap-3 text-[12px] text-neutral-500">
-            <span className="h-px flex-1 bg-white/10" />
-            <span className="uppercase tracking-[0.22em]">ou</span>
-            <span className="h-px flex-1 bg-white/10" />
-          </div>
-
-          <div className="mt-4 grid gap-2">
-            {[
-              { label: "Continuar com Google" },
-              { label: "Continuar com Apple" },
-              { label: "Continuar com Binance" },
-              { label: "Continuar com Wallet" },
-            ].map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                disabled
-                className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-white/[0.07] bg-white/2 text-[13px] text-neutral-400 opacity-60"
-                aria-disabled="true"
-                title="Em breve"
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
       </form>
+
+      <div className="mt-5">
+        <div className="flex items-center gap-3 text-[11px] text-neutral-600">
+          <span className="h-px flex-1 bg-white/6" />
+          <span>ou</span>
+          <span className="h-px flex-1 bg-white/6" />
+        </div>
+
+        <div className="mt-3 space-y-1.5">
+          {[
+            { label: "Continuar com Google" },
+            { label: "Continuar com Apple" },
+            { label: "Continuar com Binance" },
+            { label: "Continuar com Wallet" },
+          ].map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              disabled
+              aria-disabled="true"
+              title="Em breve"
+              className="inline-flex w-full items-center justify-center rounded-xl border border-white/8 bg-white/2 px-4 py-3 text-[13px] text-neutral-400 opacity-60"
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="mt-6 text-[11px] text-neutral-700">
+        Seus dados estão seguros · Nunca compartilhamos suas informações
+      </p>
     </div>
+  );
+
+  if (variant === "page") {
+    return (
+      <div className="w-full max-w-sm rounded-2xl border border-white/8 bg-[#141414] shadow-[0_40px_100px_rgba(0,0,0,0.8)]">
+        {inner}
+      </div>
+    );
+  }
+
+  return createPortal(
+    <AnimatePresence onExitComplete={onClose}>
+      {open && (
+        <div className="fixed inset-0 z-200 flex items-center justify-center p-4">
+          <motion.div
+            className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={close}
+          />
+
+          <motion.div
+            className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-white/8 bg-[#141414] shadow-[0_40px_100px_rgba(0,0,0,0.8)]"
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <button
+              onClick={close}
+              className="absolute right-4 top-4 z-10 flex h-7 w-7 items-center justify-center rounded-full text-neutral-600 transition-colors hover:bg-white/6 hover:text-neutral-300"
+            >
+              ×
+            </button>
+            {inner}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>,
+    document.body
   );
 }
