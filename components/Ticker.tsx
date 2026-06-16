@@ -16,22 +16,22 @@ const MOCK_NEWS: TickerItem[] = [
   {
     id: "t-1",
     title: "Stablecoins: o que observar em momentos de estresse de liquidez",
-    href: "/articles",
+    href: "/research",
   },
   {
     id: "t-2",
     title: "Checklist rápido: permissões, approvals e riscos de contrato",
-    href: "/articles",
+    href: "/research",
   },
   {
     id: "t-3",
     title: "AMMs na prática: slippage, taxas e impacto no preço",
-    href: "/articles",
+    href: "/research",
   },
   {
     id: "t-4",
     title: "DeFi do zero: como mapear riscos antes de operar",
-    href: "/articles",
+    href: "/research",
   },
 ];
 

@@ -5,19 +5,24 @@ import { Eye, EyeOff, Lock, User } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 export function LoginPanel({
   variant = "modal",
   onClose,
+  next,
 }: {
   variant?: "modal" | "page";
   next?: string | null;
   onClose?: () => void;
 }) {
+  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [open, setOpen] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const prev = document.documentElement.style.overflow;
@@ -25,10 +30,46 @@ export function LoginPanel({
     return () => { document.documentElement.style.overflow = prev; };
   }, []);
 
-  const canSubmit = username.trim().length > 0 && password.length > 0;
+  const canSubmit = username.trim().length > 0 && password.length > 0 && !loading;
 
-  const onSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!canSubmit) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), password }),
+        credentials: "include",
+      });
+
+      const body = (await res.json()) as { ok: boolean; error?: string };
+
+      if (!body.ok) {
+        setError(
+          body.error === "invalid_credentials"
+            ? "Usuário ou senha incorretos."
+            : "Ocorreu um erro. Tente novamente."
+        );
+        return;
+      }
+
+      window.dispatchEvent(new Event("auth-changed"));
+
+      if (variant === "modal") {
+        setOpen(false);
+      } else {
+        router.push(next ?? "/dashboard");
+        router.refresh();
+      }
+    } catch {
+      setError("Sem conexão com o servidor. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const close = () => {
@@ -58,7 +99,7 @@ export function LoginPanel({
               autoComplete="username"
               autoFocus
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => { setUsername(e.target.value); setError(null); }}
               placeholder="seu-usuario"
               className="w-full rounded-xl border border-white/8 bg-white/2 py-3 pl-9 pr-4 font-mono text-[13px] text-white placeholder:text-neutral-700 focus:border-white/20 focus:outline-none"
             />
@@ -85,7 +126,7 @@ export function LoginPanel({
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setError(null); }}
               placeholder="••••••••"
               className="w-full rounded-xl border border-white/8 bg-white/2 py-3 pl-9 pr-11 font-mono text-[13px] text-white placeholder:text-neutral-700 focus:border-white/20 focus:outline-none"
             />
@@ -100,12 +141,18 @@ export function LoginPanel({
           </div>
         </div>
 
+        {error && (
+          <p className="rounded-xl border border-red-500/20 bg-red-500/8 px-4 py-2.5 text-[12px] text-red-400">
+            {error}
+          </p>
+        )}
+
         <button
           type="submit"
           disabled={!canSubmit}
           className="mt-1 inline-flex w-full items-center justify-center rounded-xl border border-white/8 bg-white/6 px-4 py-3 text-[13px] font-medium text-white transition-colors hover:bg-white/8 active:translate-y-px disabled:pointer-events-none disabled:opacity-50"
         >
-          Entrar
+          {loading ? "Entrando…" : "Entrar"}
         </button>
       </form>
 

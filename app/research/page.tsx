@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Check, Eye, PenLine, Share, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, Eye, PenLine, Share, SlidersHorizontal } from "lucide-react";
+import { motion } from "motion/react";
 
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
@@ -182,6 +183,55 @@ function makeExcerpt(content: string, maxLen = 160) {
   return `${plain.slice(0, maxLen).replace(/\s+\S*$/, "").trim()}…`;
 }
 
+function FeaturedHero({ article }: { article: ArticleCard }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+    >
+      <Link
+        href={`/research/${article.id}`}
+        className="group relative mb-10 flex h-65 w-full overflow-hidden rounded-2xl sm:h-75"
+      >
+        <Image
+          src={article.image}
+          alt={article.title}
+          fill
+          priority
+          sizes="(max-width: 1024px) 100vw, 900px"
+          className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
+        <div className="absolute inset-0 flex flex-col justify-end p-8 sm:p-10">
+          <div className="flex items-center gap-2">
+            <Badge variant="tag">{article.tag}</Badge>
+            <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] uppercase tracking-[0.16em] text-white/70 backdrop-blur-sm">
+              Featured
+            </span>
+          </div>
+          <h2 className="mt-3 max-w-2xl text-[1.75rem] font-semibold leading-[1.1] tracking-tight text-white sm:text-[2.2rem]">
+            {article.title}
+          </h2>
+          <p className="mt-2 max-w-xl text-[14px] leading-[1.6] text-white/60 line-clamp-2">
+            {article.excerpt}
+          </p>
+          <div className="mt-5 flex items-center gap-4 text-[12px] text-white/50">
+            <span>{article.author}</span>
+            <span className="text-white/20">·</span>
+            <span>{article.date}</span>
+            <span className="text-white/20">·</span>
+            <span>{article.readTime} read</span>
+            <span className="ml-auto flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[12px] text-white/80 backdrop-blur-sm transition-all group-hover:bg-white/20 group-hover:text-white">
+              Read article <ArrowRight size={12} />
+            </span>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
+
 export default function ResearchPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("Articles");
   const [activeTag, setActiveTag] = useState<string>("All");
@@ -286,9 +336,23 @@ export default function ResearchPage() {
 
   const tabs: TabKey[] = ["Articles", "Featured"];
 
+  const featuredHero = useMemo(
+    () => allArticles.find((a) => a.featured) ?? null,
+    [allArticles]
+  );
+
   return (
     <main className="flex-1 bg-[#0f0f0f] text-white">
-      <section className="mx-auto max-w-6xl px-6 pt-10 pb-14">
+      <section className="mx-auto max-w-6xl px-6 pt-14 pb-14">
+
+        {/* Section label */}
+        <div className="mb-6 text-[11px] uppercase tracking-[0.2em] text-neutral-500">
+          Research and news
+        </div>
+
+        {/* Hero destaque */}
+        {featuredHero && <FeaturedHero article={featuredHero} />}
+
         <div className="grid gap-10 lg:grid-cols-[1fr_300px] lg:items-start">
           <div>
             <div className="flex items-end justify-between gap-6 border-b border-white/6">
@@ -355,7 +419,12 @@ export default function ResearchPage() {
               </div>
             </div>
 
-            <div className="divide-y divide-white/6">
+            <motion.div
+              className="divide-y divide-white/6"
+              initial="hidden"
+              animate="visible"
+              variants={{ visible: { transition: { staggerChildren: 0.07, delayChildren: 0.15 } } }}
+            >
               {visibleArticles.length === 0 ? (
                 <div className="py-16">
                   <div className="rounded-2xl border border-white/[0.07] bg-white/2 p-8">
@@ -369,7 +438,11 @@ export default function ResearchPage() {
                 </div>
               ) : (
                 visibleArticles.map((article) => (
-                  <article key={article.id} className="py-9">
+                  <motion.article
+                    key={article.id}
+                    className="py-9"
+                    variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] } } }}
+                  >
                     <div className="flex items-start justify-between gap-8">
                       <div className="min-w-0">
                         <Link href={`/research/${article.id}`} className="block">
@@ -401,10 +474,10 @@ export default function ResearchPage() {
                         <div className="absolute inset-0 bg-black/10" />
                       </div>
                     </div>
-                  </article>
+                  </motion.article>
                 ))
               )}
-            </div>
+            </motion.div>
           </div>
 
           <aside className="hidden lg:block">

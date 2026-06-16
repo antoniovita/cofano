@@ -15,7 +15,7 @@ export const MOCK_ARTICLES: Record<string, MockArticle> = {
     id: "a-1",
     title: "Por que entender DeFi muda sua forma de operar",
     author: "Equipe Editorial",
-    publication: "Cofano Research",
+    publication: "DeFi Institute",
     date: "Mar 20, 2026",
     readTime: "6 min",
     tag: "Fundamentos",
@@ -26,7 +26,7 @@ Em DeFi, velocidade sem clareza vira custo. Três erros comuns:
 
 - Confundir **produto** com **risco**
 - Ignorar dependências (oráculos, bridges, admin keys)
-- Tratar APR como "garantia" de retorno
+- Tratar APR como “garantia” de retorno
 
 > Se você não consegue explicar o risco em uma frase, você provavelmente não consegue gerenciá-lo.
 
@@ -44,7 +44,7 @@ Em DeFi, velocidade sem clareza vira custo. Três erros comuns:
     id: "a-2",
     title: "AMMs: preço, slippage e o custo real do swap",
     author: "Time de Pesquisa",
-    publication: "Cofano Research",
+    publication: "Mecânicas DeFi",
     date: "Mar 16, 2026",
     readTime: "8 min",
     tag: "Mecânicas",
@@ -52,7 +52,7 @@ Em DeFi, velocidade sem clareza vira custo. Três erros comuns:
     markdown: `# AMMs sem mistério
 
 - O preço é consequência da **curva** e da **liquidez**
-- Slippage aumenta quando seu trade "anda" na curva
+- Slippage aumenta quando seu trade “anda” na curva
 - Taxas + impacto no preço = custo real
 
 ## Regra prática
@@ -67,7 +67,7 @@ Em DeFi, velocidade sem clareza vira custo. Três erros comuns:
     id: "a-3",
     title: "Checklist de segurança antes de interagir com um protocolo",
     author: "Equipe Editorial",
-    publication: "Cofano Research",
+    publication: "Segurança",
     date: "Mar 10, 2026",
     readTime: "7 min",
     tag: "Segurança",
@@ -79,7 +79,7 @@ Em DeFi, velocidade sem clareza vira custo. Três erros comuns:
 - Cheque admin keys, upgrades e pausas
 - Observe dependências: oráculos, bridges, multisigs
 
-> O "ótimo" é sobreviver ao pior dia.
+> O “ótimo” é sobreviver ao pior dia.
 
 [Voltar para Research](/research)
 `,
@@ -88,7 +88,7 @@ Em DeFi, velocidade sem clareza vira custo. Três erros comuns:
     id: "a-4",
     title: "Stablecoins: o que observar em momentos de estresse",
     author: "Equipe Editorial",
-    publication: "Cofano Research",
+    publication: "Mercado",
     date: "Mar 05, 2026",
     readTime: "9 min",
     tag: "Mercado",
@@ -96,7 +96,7 @@ Em DeFi, velocidade sem clareza vira custo. Três erros comuns:
     markdown: `# Stablecoins em estresse
 
 - Colateral e mecanismos de resgate
-- Liquidez de saída e "circuit breakers"
+- Liquidez de saída e “circuit breakers”
 - Risco de contraparte e concentração
 
 [Voltar para Research](/research)
@@ -106,7 +106,7 @@ Em DeFi, velocidade sem clareza vira custo. Três erros comuns:
     id: "a-5",
     title: "Lending sem sustos: health factor e liquidações",
     author: "Time de Pesquisa",
-    publication: "Cofano Research",
+    publication: "Mecânicas DeFi",
     date: "Feb 28, 2026",
     readTime: "10 min",
     tag: "Mecânicas",
@@ -114,7 +114,7 @@ Em DeFi, velocidade sem clareza vira custo. Três erros comuns:
     markdown: `# Lending sem sustos
 
 - Health factor = buffer de segurança
-- Entenda a fórmula e quais ativos "puxam" risco
+- Entenda a fórmula e quais ativos “puxam” risco
 - Evite operar no limite em volatilidade
 
 [Voltar para Research](/research)
@@ -124,7 +124,7 @@ Em DeFi, velocidade sem clareza vira custo. Três erros comuns:
     id: "a-6",
     title: "Auditoria rápida: um framework para avaliar protocolos",
     author: "Equipe Editorial",
-    publication: "Cofano Research",
+    publication: "Segurança",
     date: "Feb 18, 2026",
     readTime: "8 min",
     tag: "Segurança",
@@ -139,3 +139,4 @@ Em DeFi, velocidade sem clareza vira custo. Três erros comuns:
 `,
   },
 };
+

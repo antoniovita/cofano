@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Wallet, ArrowRight, ChevronRight, ShieldCheck, Zap, Check, Lock, CreditCard, Copy, CheckCheck } from "lucide-react";
 import { Btn } from "@/components/ui/Btn";
-import { QRCodeSVG } from "qrcode.react";
 import { Badge } from "./ui/Badge";
+
+const QRCodeSVG = dynamic(() => import("qrcode.react").then((m) => m.QRCodeSVG), { ssr: false });
 
 const MOCK_ADDRESS = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F";
 

@@ -343,7 +343,7 @@ export default function AccountPage() {
                         Entrar
                       </Link>
                       <Link
-                        href="/articles"
+                        href="/research"
                         className="inline-flex h-10 items-center justify-center rounded-xl border border-white/[0.07] bg-white/2 px-4 text-[13px] text-neutral-300 transition-colors hover:bg-white/6 hover:text-white active:translate-y-px"
                       >
                         Ver artigos

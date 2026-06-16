@@ -6,5 +6,5 @@ export default async function ResearchArticlePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <ResearchPageClient id={id} />;
+  return <ResearchPageClient id={id} backHref="/research" />;
 }
