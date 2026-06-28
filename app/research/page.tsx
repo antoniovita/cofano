@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Eye, PenLine, Share, SlidersHorizontal } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, Eye, PenLine, Search, Share, SlidersHorizontal, X } from "lucide-react";
+import { Dropdown, DropdownItem, DropdownLabel } from "@/components/ui/Dropdown";
 import { motion } from "motion/react";
 
 import { Badge } from "@/components/ui/Badge";
@@ -235,15 +236,15 @@ function FeaturedHero({ article }: { article: ArticleCard }) {
 export default function ResearchPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("Articles");
   const [activeTag, setActiveTag] = useState<string>("All");
-  const [filterOpen, setFilterOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const [apiArticles, setApiArticles] = useState<ApiArticle[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [viewerRole, setViewerRole] = useState<ViewerRole>(null);
-  const filterRef = useRef<HTMLDivElement>(null);
 
   const apiUrl = useMemo(() => {
     const params = new URLSearchParams({
       published: "true",
+      locale: "en",
       order: activeTab === "Featured" ? "views" : "createdAt",
       direction: "desc",
       take: "50",
@@ -262,7 +263,9 @@ export default function ResearchPage() {
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as unknown;
-        return Array.isArray(data) ? (data as ApiArticle[]) : [];
+        if (Array.isArray(data)) return data as ApiArticle[];
+        const obj = data as { items?: ApiArticle[] };
+        return Array.isArray(obj?.items) ? obj.items : [];
       })
       .then((data) => setApiArticles(data))
       .catch((err) => {
@@ -303,20 +306,14 @@ export default function ResearchPage() {
       .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
   }, [articlesForTab]);
 
-  const visibleArticles = useMemo(() =>
-    articlesForTab.filter((a) => activeTag === "All" || a.tag === activeTag),
-    [activeTag, articlesForTab]
-  );
-
-  useEffect(() => {
-    const onPointerDown = (e: PointerEvent) => {
-      if (!filterOpen) return;
-      if ((e.target as Node | null) && filterRef.current?.contains(e.target as Node)) return;
-      setFilterOpen(false);
-    };
-    window.addEventListener("pointerdown", onPointerDown);
-    return () => window.removeEventListener("pointerdown", onPointerDown);
-  }, [filterOpen]);
+  const visibleArticles = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return articlesForTab.filter((a) => {
+      if (activeTag !== "All" && a.tag !== activeTag) return false;
+      if (!q) return true;
+      return a.title.toLowerCase().includes(q) || a.tag.toLowerCase().includes(q) || a.excerpt.toLowerCase().includes(q);
+    });
+  }, [activeTag, articlesForTab, search]);
 
   useEffect(() => {
     let active = true;
@@ -363,7 +360,7 @@ export default function ResearchPage() {
                     <button
                       key={tab}
                       type="button"
-                      onClick={() => { setActiveTab(tab); setActiveTag("All"); setFilterOpen(false); }}
+                      onClick={() => { setActiveTab(tab); setActiveTag("All"); setSearch(""); }}
                       className={cn("relative py-4 transition-colors", active ? "text-white" : "hover:text-neutral-200")}
                     >
                       {tab}
@@ -374,6 +371,26 @@ export default function ResearchPage() {
               </div>
 
               <div className="flex items-center gap-3 pb-3">
+                <div className="relative">
+                  <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-600" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search…"
+                    className="h-8 w-44 rounded-full border border-white/10 bg-white/4 pl-8 pr-7 text-[12px] text-neutral-300 placeholder:text-neutral-600 outline-none transition-colors focus:border-white/20 focus:bg-white/6 focus:text-white"
+                  />
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={() => setSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-neutral-300"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+
                 {(viewerRole === "CONTRIBUTOR" || viewerRole === "ADMIN") ? (
                   <Link
                     href="/research/create"
@@ -384,38 +401,30 @@ export default function ResearchPage() {
                   </Link>
                 ) : null}
 
-                <div ref={filterRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setFilterOpen((v) => !v)}
-                    className={cn("inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/4 px-3 py-1.5 text-[12px] text-neutral-300 transition-colors hover:bg-white/8", filterOpen && "bg-white/8")}
-                  >
-                    <SlidersHorizontal size={14} className="text-neutral-400" />
-                    Filter
-                  </button>
-
-                  {filterOpen ? (
-                    <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-2xl border border-white/[0.07] bg-[#0f0f0f] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
-                      <div className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-neutral-500">Topics</div>
-                      {[{ tag: "All", count: articlesForTab.length }, ...tabTagStats].map(({ tag, count }) => {
-                        const isActive = tag === activeTag;
-                        return (
-                          <button
-                            key={tag}
-                            type="button"
-                            onClick={() => { setActiveTag(tag); setFilterOpen(false); }}
-                            className={cn("flex w-full items-center justify-between rounded-xl px-3 py-2 mt-2 text-[13px] transition-colors", isActive ? "bg-white/8 text-white" : "text-neutral-300 hover:bg-white/6")}
-                          >
-                            <span className="truncate">{tag}</span>
-                            <span className="flex items-center gap-2 text-neutral-500">
-                              <span className="text-[12px]">{count}</span>
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                </div>
+                <Dropdown
+                  width="w-64"
+                  trigger={(open) => (
+                    <button
+                      type="button"
+                      className={cn("inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/4 px-3 py-1.5 text-[12px] text-neutral-300 transition-colors hover:bg-white/8", open && "bg-white/8")}
+                    >
+                      <SlidersHorizontal size={14} className="text-neutral-400" />
+                      Filter
+                    </button>
+                  )}
+                >
+                  <DropdownLabel>Topics</DropdownLabel>
+                  {[{ tag: "All", count: articlesForTab.length }, ...tabTagStats].map(({ tag, count }) => (
+                    <DropdownItem
+                      key={tag}
+                      active={tag === activeTag}
+                      onClick={() => setActiveTag(tag)}
+                    >
+                      <span className="truncate">{tag}</span>
+                      <span className="ml-auto text-[12px] text-neutral-500">{count}</span>
+                    </DropdownItem>
+                  ))}
+                </Dropdown>
               </div>
             </div>
 
@@ -432,7 +441,7 @@ export default function ResearchPage() {
                       {loading ? "Loading" : "No results"}
                     </div>
                     <p className="mt-3 text-[14px] leading-7 text-neutral-400">
-                      {loading ? "Fetching articles…" : "No articles found with this filter."}
+                      {loading ? "Fetching articles…" : search ? `No results for "${search}".` : "No articles found with this filter."}
                     </p>
                   </div>
                 </div>

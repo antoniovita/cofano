@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, ChevronUp, Clock, Copy, Heart, Share } from "lucide-react";
+import { Bookmark, Check, ChevronDown, ChevronUp, Clock, Copy, Heart, Share } from "lucide-react";
 
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
@@ -190,7 +190,7 @@ function renderMarkdown(markdown: string) {
       const cls   = level === 1
         ? "mt-10 mb-1 text-[1.5rem] font-semibold leading-snug tracking-tight text-white scroll-mt-24"
         : level === 2
-          ? "mt-10 mb-1 border-t border-white/6 pt-8 text-[1.2rem] font-semibold tracking-tight text-white scroll-mt-24"
+          ? "mt-10 mb-1 text-[1.2rem] font-semibold tracking-tight text-white scroll-mt-24"
           : "mt-7 mb-1 text-[1rem] font-semibold tracking-tight text-neutral-200 scroll-mt-24";
       nodes.push(<Tag key={`h-${key++}`} id={id} className={cls}>{parseInline(text, `h-${key}`)}</Tag>);
       i++; continue;
@@ -306,6 +306,42 @@ function LikeButton({ articleId }: { articleId: string }) {
   );
 }
 
+function SaveBtn({ articleId }: { articleId: string }) {
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const toggle = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await fetch(`/api/articles/saved?id=${encodeURIComponent(articleId)}`, {
+        method: saved ? "DELETE" : "POST",
+        credentials: "include",
+      });
+      setSaved((v) => !v);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      disabled={busy}
+      className={cn(
+        "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] transition-all disabled:opacity-50",
+        saved
+          ? "border-white/20 bg-white/8 text-white"
+          : "border-white/10 bg-white/4 text-neutral-400 hover:bg-white/8 hover:text-white"
+      )}
+    >
+      <Bookmark size={13} className={saved ? "fill-white" : ""} />
+      {saved ? "Saved" : "Save"}
+    </button>
+  );
+}
+
 function ShareBtn({ title }: { title: string }) {
   const [copied, setCopied] = useState(false);
   const onShare = useCallback(async () => {
@@ -409,9 +445,7 @@ export default function ResearchPageClient({ id, backHref = "/research" }: { id:
       .then((data) => {
         if (!data) { setStatus("notfound"); return; }
         setApiArticle(data); setStatus("ready");
-        fetch(`/api/articles?id=${encodeURIComponent(id)}&incrementViews=true`, {
-          method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ incrementViews: true }),
-        }).catch(() => {});
+        fetch(`/api/articles/${encodeURIComponent(id)}/view`, { method: "POST" }).catch(() => {});
       })
       .catch((err) => { if ((err as { name?: string }).name === "AbortError") return; setStatus("notfound"); });
 
@@ -424,6 +458,28 @@ export default function ResearchPageClient({ id, backHref = "/research" }: { id:
     if (status === "ready" && fallback && !apiArticle) return toViewArticleFromMock(fallback);
     return null;
   }, [apiArticle, fallback, status]);
+
+  useEffect(() => {
+    if (!viewArticle) return;
+    try {
+      const existing = JSON.parse(localStorage.getItem("last_read_article") ?? "null") as { id: string; progress: number } | null;
+      const progress = existing?.id === viewArticle.id ? (existing.progress ?? 0) : 0;
+      localStorage.setItem("last_read_article", JSON.stringify({ id: viewArticle.id, title: viewArticle.title, progress }));
+    } catch {}
+
+    const onScroll = () => {
+      const el = document.documentElement;
+      const scrolled = el.scrollTop;
+      const total = el.scrollHeight - el.clientHeight;
+      if (total <= 0) return;
+      const progress = Math.round((scrolled / total) * 100);
+      try {
+        localStorage.setItem("last_read_article", JSON.stringify({ id: viewArticle.id, title: viewArticle.title, progress }));
+      } catch {}
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [viewArticle]);
 
   const toc            = useMemo(() => viewArticle ? extractToc(viewArticle.markdown) : [], [viewArticle]);
   const markdownNodes  = useMemo(() => viewArticle ? renderMarkdown(viewArticle.markdown) : null, [viewArticle]);
@@ -526,8 +582,9 @@ export default function ResearchPageClient({ id, backHref = "/research" }: { id:
         </article>
 
         {/* Engagement */}
-        <div className="mt-10 flex items-center gap-3 border-t border-white/6 pt-6">
+        <div className="mt-5 flex items-center gap-3 pt-6">
           <LikeButton articleId={viewArticle.id} />
+          <SaveBtn articleId={viewArticle.id} />
           <ShareBtn title={viewArticle.title} />
         </div>
 

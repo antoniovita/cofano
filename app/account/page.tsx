@@ -23,6 +23,8 @@ type ApiUser = {
   id: string;
   username: string;
   role: "ADMIN" | "USER" | "CONTRIBUTOR";
+  locale: string;
+  theme: "DARK" | "LIGHT";
 };
 
 type LoadState =
@@ -117,7 +119,19 @@ export default function AccountPage() {
           return;
         }
 
-        setState({ status: "ready", user: body.user });
+        const u = body.user;
+        setState({ status: "ready", user: u });
+
+        // seed theme/locale from DB, falling back to localStorage
+        const dbTheme: ThemeMode = u.theme === "LIGHT" ? "light" : "dark";
+        setTheme(dbTheme);
+        applyTheme(dbTheme);
+        try { window.localStorage.setItem("theme", dbTheme); } catch {}
+
+        const dbLocale = u.locale ?? "pt";
+        const found = LANGUAGES.find((l) => l.code === dbLocale) ?? LANGUAGES[0];
+        setLanguage(found);
+        try { window.localStorage.setItem("language", found.code); } catch {}
       } catch {
         if (!active) return;
         setState({ status: "error" });
@@ -125,27 +139,7 @@ export default function AccountPage() {
     };
 
     void run();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    const storedTheme = (typeof window !== "undefined"
-      ? window.localStorage.getItem("theme")
-      : null) as ThemeMode | null;
-    const nextTheme: ThemeMode = storedTheme === "light" ? "light" : "dark";
-    setTheme(nextTheme);
-    applyTheme(nextTheme);
-
-    const storedLang =
-      typeof window !== "undefined"
-        ? window.localStorage.getItem("language")
-        : null;
-    if (storedLang) {
-      const found = LANGUAGES.find((l) => l.code === storedLang);
-      if (found) setLanguage(found);
-    }
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -162,6 +156,20 @@ export default function AccountPage() {
       setSection(key);
     }
   }, []);
+
+  const savePreference = async (patch: { theme?: ThemeMode; locale?: string }) => {
+    try {
+      await fetch("/api/me/preferences", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(patch.theme ? { theme: patch.theme } : {}),
+          ...(patch.locale ? { locale: patch.locale } : {}),
+        }),
+      });
+    } catch {}
+  };
 
   const onLogout = async () => {
     if (logoutBusy) return;
@@ -494,10 +502,8 @@ export default function AccountPage() {
                                   onClick={() => {
                                     setTheme(opt);
                                     applyTheme(opt);
-                                    try {
-                                      window.localStorage.setItem("theme", opt);
-                                    } catch {
-                                    }
+                                    try { window.localStorage.setItem("theme", opt); } catch {}
+                                    void savePreference({ theme: opt });
                                   }}
                                   className={cn(
                                     "inline-flex h-10 items-center justify-center rounded-xl border px-4 text-[13px] transition-colors",
@@ -534,10 +540,8 @@ export default function AccountPage() {
                                   type="button"
                                   onClick={() => {
                                     setLanguage(opt);
-                                    try {
-                                      window.localStorage.setItem("language", opt.code);
-                                    } catch {
-                                    }
+                                    try { window.localStorage.setItem("language", opt.code); } catch {}
+                                    void savePreference({ locale: opt.code });
                                   }}
                                   className={cn(
                                     "flex items-center justify-between rounded-xl border px-4 py-3 text-[13px] transition-colors",

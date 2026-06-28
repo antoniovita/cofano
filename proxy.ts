@@ -88,6 +88,6 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/console/:path*", "/api/admin/:path*"],
+  matcher: ["/console", "/console/:path*", "/api/admin/:path*", "/account", "/account/:path*", "/portfolio", "/portfolio/:path*"],
 };
 
